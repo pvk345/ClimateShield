@@ -97,7 +97,7 @@ export default function ComparePage() {
       ]);
 
       if (!r1 || !r2) {
-        setError("Could not find one or both addresses. Try being more specific.");
+        setError("We couldn't find one or both addresses. Try including the full street, city, state and ZIP code — for example: '123 Main St, Houston TX 77002'.");
         setLoading(false);
         return;
       }

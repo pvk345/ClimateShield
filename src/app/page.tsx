@@ -106,7 +106,7 @@ export default function Home() {
       const match = geoData?.result?.addressMatches?.[0];
 
       if (!match) {
-        setError("Address not found. Try a more specific US address.");
+        setError("We couldn't find that address. Try including the full street, city and state — for example: '123 Main St, Houston TX 77002'.");
         setLoading(false);
         return;
       }
@@ -114,7 +114,7 @@ export default function Home() {
       const fips = match.geographies?.Counties?.[0]?.GEOID;
 
       if (!fips) {
-        setError("Could not determine county for this address.");
+        setError("We found the address but couldn't determine the county. Try adding a ZIP code.");
         setLoading(false);
         return;
       }
@@ -123,7 +123,7 @@ export default function Home() {
       const riskData = await riskRes.json();
 
       if (riskData.error) {
-        setError("Could not find risk data for this address.");
+        setError("We don't have risk data for this county yet. Try a different address.");
         setLoading(false);
         return;
       }
@@ -146,7 +146,7 @@ export default function Home() {
         projections: riskData.projections,
       });
     } catch (err) {
-      setError("Something went wrong. Please try again.");
+      setError("Something went wrong on our end. Please try again in a moment.");
     } finally {
       setLoading(false);
     }
