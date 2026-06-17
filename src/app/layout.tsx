@@ -31,6 +31,15 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col bg-black">
         <Navbar />
         {children}
+        <footer className="w-full border-t border-zinc-800 bg-black px-6 py-6 mt-auto">
+        <div className="max-w-3xl mx-auto flex items-center justify-between">
+          <p className="text-xs text-zinc-500">© 2026 ClimateShield</p>
+          <div className="flex gap-6">
+            <a href="/terms" className="text-xs text-zinc-500 hover:text-zinc-300">Terms</a>
+            <a href="/privacy" className="text-xs text-zinc-500 hover:text-zinc-300">Privacy</a>
+          </div>
+        </div>
+        </footer>
       </body>
     </html>
   );
