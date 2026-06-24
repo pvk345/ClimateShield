@@ -1,40 +1,43 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
-import { createClient } from "@supabase/supabase-js";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  }
-);
-
 export async function POST(req: NextRequest) {
   try {
-    // Get all saved addresses
-    const { data: addresses, error } = await supabase
-      .from("saved_addresses")
-      .select("*");
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const serviceKey = process.env.SUPABASE_SERVICE_KEY!;
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+    // Fetch saved addresses using REST API directly
+    const addressRes = await fetch(`${supabaseUrl}/rest/v1/saved_addresses?select=*`, {
+      headers: {
+        "apikey": serviceKey,
+        "Authorization": `Bearer ${serviceKey}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    const addresses = await addressRes.json();
+
+    if (!Array.isArray(addresses)) {
+      return NextResponse.json({ error: "Failed to fetch addresses", details: addresses }, { status: 500 });
     }
 
     let alertsSent = 0;
 
-    for (const saved of addresses || []) {
-      // Get user email
-      const userRes = await supabase.auth.admin.getUserById(saved.user_id);
-      const email = userRes.data.user?.email;
+    for (const saved of addresses) {
+      // Get user email using REST API
+      const userRes = await fetch(`${supabaseUrl}/auth/v1/admin/users/${saved.user_id}`, {
+        headers: {
+          "apikey": serviceKey,
+          "Authorization": `Bearer ${serviceKey}`,
+        },
+      });
+      const userData = await userRes.json();
+      const email = userData?.email;
       if (!email) continue;
 
-      // Get current score using geocoder to get fips from address
+      // Get current score
       const encoded = encodeURIComponent(saved.address);
       const geoRes = await fetch(
         `https://geocoding.geo.census.gov/geocoder/geographies/onelineaddress?address=${encoded}&benchmark=Public_AR_Current&vintage=Current_Current&layers=Counties&format=json`
@@ -46,18 +49,15 @@ export async function POST(req: NextRequest) {
       const fips = match.geographies?.Counties?.[0]?.GEOID;
       if (!fips) continue;
 
-      const mlRes = await fetch(
-        `${process.env.ML_API_URL}/predict/${fips}`
-      );
+      const mlRes = await fetch(`${process.env.ML_API_URL}/predict/${fips}`);
       const current = await mlRes.json();
       if (current.error) continue;
 
       const scoreDiff = Math.abs(current.composite - saved.composite);
 
-      // Only alert if score changed by more than 5 points
-      if (scoreDiff > 5) {
+      if (scoreDiff >= 5) {
         await resend.emails.send({
-          from: "ClimateShield <onboarding@resend.dev>",
+          from: "onboarding@resend.dev",
           to: email,
           subject: `Risk score changed for ${saved.address}`,
           html: `
@@ -104,6 +104,6 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, alertsSent });
   } catch (err) {
-    return NextResponse.json({ error: "Failed to send alerts" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to send alerts", details: String(err) }, { status: 500 });
   }
 }
