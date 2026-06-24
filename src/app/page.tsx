@@ -66,14 +66,11 @@ export default function Home() {
 
   async function saveAddress() {
     const { data: { user } } = await supabase.auth.getUser();
-
     if (!user) {
       window.location.href = "/login";
       return;
     }
-
     if (!result) return;
-
     const { error } = await supabase.from("saved_addresses").insert({
       user_id: user.id,
       address: result.address,
@@ -83,7 +80,6 @@ export default function Home() {
       tier: result.tier,
       zone: result.zone,
     });
-
     if (error) {
       alert("Error saving address");
     } else {
@@ -94,45 +90,36 @@ export default function Home() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!address.trim()) return;
-
     setLoading(true);
     setError("");
     setResult(null);
-
     try {
       const encoded = encodeURIComponent(address);
       const geoRes = await fetch(`/api/geocode?address=${encoded}`);
       const geoData = await geoRes.json();
       const match = geoData?.result?.addressMatches?.[0];
-
       if (!match) {
         setError("We couldn't find that address. Try including the full street, city and state — for example: '123 Main St, Houston TX 77002'.");
         setLoading(false);
         return;
       }
-
       const fips = match.geographies?.Counties?.[0]?.GEOID;
       const lat = match.coordinates?.y;
       const lon = match.coordinates?.x;
-
       if (!fips) {
-        setError("Could not determine county for this address.");
+        setError("We found the address but couldn't determine the county. Try adding a ZIP code.");
         setLoading(false);
         return;
       }
-
       const riskRes = await fetch(`/api/risk?fips=${fips}&lat=${lat}&lon=${lon}`);
       const riskData = await riskRes.json();
-
       if (riskData.error) {
         setError("We don't have risk data for this county yet. Try a different address.");
         setLoading(false);
         return;
       }
-
       const { wildfire, flood, composite } = riskData;
       const tier = getTier(composite);
-
       setResult({
         address: match.matchedAddress,
         wildfire,
@@ -199,13 +186,11 @@ export default function Home() {
                 <p className="text-4xl font-bold text-zinc-950 dark:text-zinc-50">{result.wildfire}</p>
                 <p className="text-xs text-zinc-400">out of 100</p>
               </div>
-
               <div className="flex flex-col gap-1 rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
                 <p className="text-xs text-zinc-500 uppercase tracking-wide">Flood Risk</p>
                 <p className="text-4xl font-bold text-zinc-950 dark:text-zinc-50">{result.flood}</p>
                 <p className="text-xs text-zinc-400">out of 100</p>
               </div>
-
               <div className="flex flex-col gap-1 rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
                 <p className="text-xs text-zinc-500 uppercase tracking-wide">Composite Score</p>
                 <p className="text-4xl font-bold text-zinc-950 dark:text-zinc-50">{result.composite}</p>
@@ -217,11 +202,42 @@ export default function Home() {
               Risk Tier: <span className="font-bold">{result.tier}</span>
             </div>
 
+            {(result.tier === "High" || result.tier === "Extreme") && (
+              <div className="w-full flex flex-col gap-3 rounded-2xl border border-orange-200 bg-orange-50 p-6 dark:border-orange-900 dark:bg-orange-950">
+                <h2 className="text-base font-semibold text-orange-800 dark:text-orange-200">
+                  ⚠️ This property is in a {result.tier} risk area
+                </h2>
+                <p className="text-sm text-orange-700 dark:text-orange-300">
+                  Properties in this risk tier typically face higher insurance premiums or may be difficult to insure. Consider reviewing your coverage.
+                </p>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                    <a
+                    href="https://www.neptuneflood.com/?ref=climateshield"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 h-11 flex items-center justify-center rounded-full bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors"
+                  >
+                    🌊 Get Flood Insurance Quote
+                  </a>
+                    <a
+                    href="https://www.hippo.com/?ref=climateshield"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 h-11 flex items-center justify-center rounded-full bg-orange-600 text-white text-sm font-medium hover:bg-orange-700 transition-colors"
+                  >
+                    🏠 Get Home Insurance Quote
+                  </a>
+                </div>
+                <p className="text-xs text-orange-600 dark:text-orange-400">
+                  ClimateShield may earn a commission if you purchase through these links.
+                </p>
+              </div>
+            )}
+
             <div className="w-full flex flex-col gap-3 rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900 text-left">
               <h2 className="text-base font-semibold text-zinc-950 dark:text-zinc-50">
                 Why this risk score?
               </h2>
-
               <div className="flex flex-col gap-4">
                 <div className="flex flex-col gap-1">
                   <p className="text-sm font-medium text-orange-500">
@@ -231,7 +247,6 @@ export default function Home() {
                     {getWildfireExplanation(result.wildfire, result.zone)}
                   </p>
                 </div>
-
                 <div className="flex flex-col gap-1">
                   <p className="text-sm font-medium text-blue-500">
                     🌊 Flood Risk — {result.flood}/100
@@ -240,7 +255,6 @@ export default function Home() {
                     {getFloodExplanation(result.flood, result.zone)}
                   </p>
                 </div>
-
                 <div className="flex flex-col gap-1">
                   <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
                     ⚠️ Overall Assessment
@@ -250,7 +264,6 @@ export default function Home() {
                   </p>
                 </div>
               </div>
-
               <p className="text-xs text-zinc-400 mt-2">
                 Source: ClimateShield XGBoost Model v1.0 • FEMA NRI + USFS Wildfire Risk + FEMA Disaster History • County-level data
               </p>
@@ -263,9 +276,9 @@ export default function Home() {
               ⭐ Save This Address
             </button>
 
-            <ProjectionChart 
-              wildfire={result.wildfire} 
-              flood={result.flood} 
+            <ProjectionChart
+              wildfire={result.wildfire}
+              flood={result.flood}
               projections={result.projections}
             />
             <DownloadReport
