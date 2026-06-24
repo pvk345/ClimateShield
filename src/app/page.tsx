@@ -4,6 +4,8 @@ import { useState } from "react";
 import ProjectionChart from "@/components/ProjectionChart";
 import DownloadReport from "@/components/RiskReport";
 import { supabase } from "@/lib/supabase";
+import NeighborhoodComparison from "@/components/NeighborhoodComparison";
+
 
 type RiskResult = {
   address: string;
@@ -16,6 +18,9 @@ type RiskResult = {
   floodRating: string;
   source: string;
   projections: { year: number; wildfire: number; flood: number; composite: number; }[];
+  lat: number;
+  lon: number;
+  fips: string;
 };
 
 function getTier(score: number): "Low" | "Moderate" | "High" | "Extreme" {
@@ -133,7 +138,10 @@ export default function Home() {
         floodRating: riskData.floodRating,
         source: riskData.source,
         projections: riskData.projections,
-      });
+        lat,
+        lon,
+        fips,
+    });
     } catch (err) {
       setError("Something went wrong on our end. Please try again in a moment.");
     } finally {
@@ -288,6 +296,14 @@ export default function Home() {
               composite={result.composite}
               tier={result.tier}
               zone={result.zone}
+            />
+            <NeighborhoodComparison
+              fips={result.fips}
+              lat={result.lat}
+              lon={result.lon}
+              wildfire={result.wildfire}
+              flood={result.flood}
+              composite={result.composite}
             />
           </div>
         )}
