@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(req: NextRequest) {
   const county_fips = req.nextUrl.searchParams.get("fips");
+  const lat = req.nextUrl.searchParams.get("lat");
+  const lon = req.nextUrl.searchParams.get("lon");
 
   if (!county_fips) {
     return NextResponse.json({ error: "Missing FIPS code" }, { status: 400 });
@@ -9,9 +11,14 @@ export async function GET(req: NextRequest) {
 
   try {
     const paddedFips = county_fips.padStart(5, "0");
-    const mlRes = await fetch(
-      `${process.env.ML_API_URL}/predict/${paddedFips}`
-    );
+    
+    // Build URL with lat/lon if available for property-level scoring
+    let mlUrl = `${process.env.ML_API_URL}/predict/${paddedFips}`;
+    if (lat && lon) {
+      mlUrl += `?lat=${lat}&lon=${lon}`;
+    }
+
+    const mlRes = await fetch(mlUrl);
     const data = await mlRes.json();
 
     if (data.error) {

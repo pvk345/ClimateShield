@@ -112,14 +112,16 @@ export default function Home() {
       }
 
       const fips = match.geographies?.Counties?.[0]?.GEOID;
+      const lat = match.coordinates?.y;
+      const lon = match.coordinates?.x;
 
       if (!fips) {
-        setError("We found the address but couldn't determine the county. Try adding a ZIP code.");
+        setError("Could not determine county for this address.");
         setLoading(false);
         return;
       }
 
-      const riskRes = await fetch(`/api/risk?fips=${fips}`);
+      const riskRes = await fetch(`/api/risk?fips=${fips}&lat=${lat}&lon=${lon}`);
       const riskData = await riskRes.json();
 
       if (riskData.error) {
